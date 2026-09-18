@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner() {
+      return signedIn() && (
+        resource.data.get('kullaniciId', '') == request.auth.uid ||
+        resource.data.get('kullaniciEmail', '') == request.auth.token.email
+      );
+    }
+
+    match /users/{userId} {
+      allow create, read, update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /mulakatlar/{mulakatId} {
+      // Bekleyen içerikler yalnızca yöneticilere veya içeriğin sahibine görünür.
+      allow read: if resource.data.get('status', '') == 'onaylandi' || isOwner() || isAdmin();
+      allow create: if signedIn() &&
+        request.resource.data.kullaniciId == request.auth.uid &&
+        request.resource.data.status == 'beklemede' &&
+        request.resource.data.deneyim is string &&
+        request.resource.data.deneyim.size() >= 20 &&
+        request.resource.data.deneyim.size() <= 2000;
+      allow delete: if isOwner() || isAdmin();
+      // Yalnızca admin yayın durumunu değiştirebilir. Kullanıcı etkileşimleri
+      // dışında hiçbir alan sıradan kullanıcı tarafından güncellenemez.
+      allow update: if isAdmin() || (
+        signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'destekleyenler', 'desteklemeyenler', 'kaydedenler', 'sikayetler'
+        ])
+      );
+    }
+  }
+}
