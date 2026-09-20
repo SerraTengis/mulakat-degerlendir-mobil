@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, SafeAreaView, StatusBar, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Firebase Bağlantıları
 import { auth, db } from '../firebaseConfig';
-import { signOut } from 'firebase/auth';
+import { signOut, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
 
 export default function Profil({ navigation }) {
@@ -17,6 +17,9 @@ export default function Profil({ navigation }) {
   const [desteklenmeyenler, setDesteklenmeyenler] = useState([]);
   
   const [yukleniyor, setYukleniyor] = useState(true);
+  const [silmeModalAcik, setSilmeModalAcik] = useState(false);
+  const [mevcutSifre, setMevcutSifre] = useState('');
+  const [hesapSiliniyor, setHesapSiliniyor] = useState(false);
 
   const kullaniciAd = auth.currentUser?.displayName || "Kullanıcı";
   const kullaniciEmail = auth.currentUser?.email || "E-posta bulunamadı";
@@ -104,10 +107,38 @@ export default function Profil({ navigation }) {
     ]);
   };
 
+  const hesapSilmeOnayi = () => {
+    Alert.alert('Hesabı Kapat', 'Hesabınız ve yazdığınız tüm değerlendirmeler kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: () => setSilmeModalAcik(true) },
+    ]);
+  };
+
+  const handleHesapSil = async () => {
+    const user = auth.currentUser;
+    if (!user || !user.email) return;
+    if (!mevcutSifre) return Alert.alert('Şifre Gerekli', 'Devam etmek için mevcut şifrenizi girin.');
+
+    setHesapSiliniyor(true);
+    try {
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, mevcutSifre));
+      const snapshot = await getDocs(query(collection(db, 'mulakatlar'), where('kullaniciId', '==', user.uid)));
+      await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+      await deleteDoc(doc(db, 'users', user.uid));
+      await deleteUser(user);
+      setSilmeModalAcik(false);
+      setMevcutSifre('');
+      navigation.reset({ index: 0, routes: [{ name: 'Giris' }] });
+    } catch (error) {
+      Alert.alert('Hesap Silinemedi', error.code === 'auth/requires-recent-login' ? 'Güvenliğiniz için yeniden giriş yapmanız gerekiyor.' : error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' ? 'Giriş bilgileri hatalı.' : error.code === 'auth/too-many-requests' ? 'Çok fazla başarısız deneme yaptınız, lütfen daha sonra tekrar deneyin.' : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.');
+    } finally {
+      setHesapSiliniyor(false);
+    }
+  };
+
   const handleAyarlar = () => {
     Alert.alert("Hesap Ayarları", "Lütfen yapmak istediğiniz işlemi seçin:", [
       { text: "Vazgeç", style: "cancel" },
-      { text: "Şifre Değiştir", onPress: () => Alert.alert("Bilgi", "Şifre sıfırlama özelliği yakında eklenecek.") },
       { 
         text: "Çıkış Yap", 
         onPress: () => {
@@ -116,7 +147,7 @@ export default function Profil({ navigation }) {
           }).catch(error => console.log("Çıkış hatası:", error));
         } 
       },
-      { text: "Hesabı Sil", style: "destructive", onPress: () => Alert.alert("Bilgi", "Bu özellik yakında eklenecektir.") }
+      { text: "Hesabı Kapat", style: "destructive", onPress: hesapSilmeOnayi }
     ]);
   };
 
@@ -258,6 +289,20 @@ export default function Profil({ navigation }) {
           </View>
         }
       />
+      <Modal visible={silmeModalAcik} transparent animationType="fade" onRequestClose={() => !hesapSiliniyor && setSilmeModalAcik(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.passwordModal}>
+            <Ionicons name="shield-checkmark-outline" size={34} color="#D93025" />
+            <Text style={styles.passwordModalTitle}>Kimliğinizi Doğrulayın</Text>
+            <Text style={styles.passwordModalText}>Hesabınızı kalıcı olarak silmek için mevcut şifrenizi girin.</Text>
+            <TextInput style={styles.passwordInput} placeholder="Mevcut şifreniz" placeholderTextColor="#777" secureTextEntry value={mevcutSifre} onChangeText={setMevcutSifre} editable={!hesapSiliniyor} autoFocus />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => { setSilmeModalAcik(false); setMevcutSifre(''); }} disabled={hesapSiliniyor}><Text style={styles.modalCancelText}>İptal</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.modalDeleteButton, hesapSiliniyor && { opacity: 0.7 }]} onPress={handleHesapSil} disabled={hesapSiliniyor}>{hesapSiliniyor ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalDeleteText}>Hesabı Sil</Text>}</TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -314,4 +359,14 @@ const styles = StyleSheet.create({
   readMoreText: { color: '#0A66C2', fontSize: 12, fontWeight: 'bold', marginRight: 4 },
   deleteButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FCE8E6', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   deleteText: { color: '#D93025', fontSize: 12, fontWeight: 'bold', marginLeft: 4 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  passwordModal: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center' },
+  passwordModalTitle: { color: '#0A1931', fontSize: 19, fontWeight: 'bold', marginTop: 10 },
+  passwordModalText: { color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 8, marginBottom: 18 },
+  passwordInput: { width: '100%', borderWidth: 1, borderColor: '#D0DCEB', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: '#0A1931' },
+  modalActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 16 },
+  modalCancelButton: { flex: 1, borderWidth: 1, borderColor: '#D0DCEB', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  modalCancelText: { color: '#0A1931', fontWeight: 'bold' },
+  modalDeleteButton: { flex: 1, minHeight: 47, backgroundColor: '#D93025', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  modalDeleteText: { color: '#fff', fontWeight: 'bold' },
 });

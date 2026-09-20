@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Alert, Platform, Switch, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Alert, Platform, Switch, ActivityIndicator, Modal, FlatList, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -102,8 +102,9 @@ export default function MulakatDegerlendir({ navigation }) {
   };
 
   return (
-    <View style={styles.screen}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.screen}>
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
         
         <View style={styles.headerContainer}>
@@ -284,7 +285,6 @@ export default function MulakatDegerlendir({ navigation }) {
             ) : (
               <>
                 <Text style={styles.submitButtonText}>Kaydet ve Yayınla</Text>
-                <Ionicons name="save-outline" size={18} color="#ffffff" style={{ marginLeft: 8 }} />
               </>
             )}
           </TouchableOpacity>
@@ -292,6 +292,7 @@ export default function MulakatDegerlendir({ navigation }) {
 
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={listeTipi !== null} transparent animationType="slide" onRequestClose={() => setListeTipi(null)}>
         <View style={styles.modalBackdrop}>
@@ -325,7 +326,7 @@ export default function MulakatDegerlendir({ navigation }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,10 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, SafeAreaView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Giris({ navigation }) {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#E3EBF3" />
       
       <View style={styles.logoContainer}>
@@ -30,7 +30,7 @@ export default function Giris({ navigation }) {
           <Text style={styles.buttonTextSecondary}>Kayıt Ol</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   logoContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 },
-  logoBox: { width: 100, height: 100, backgroundColor: '#ffffff', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  logoBox: { width: 100, height: 100, backgroundColor: '#ffffff', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 20, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 3 } }) },
   logoText: { fontSize: 32, fontWeight: 'bold', color: '#0A1931' },
   logoBold: { color: '#0A66C2' },
   subtitle: { fontSize: 16, color: '#666666', marginTop: 8 },

@@ -3,8 +3,9 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Keyb
 import { Ionicons } from '@expo/vector-icons';
 // Firebase bağlantıları
 import { auth, db } from '../firebaseConfig'; 
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { getAuthErrorMessage, isValidEmail } from '../authUtils';
 
 export default function KayitOl({ navigation }) {
   const [adSoyad, setAdSoyad] = useState('');
@@ -52,7 +53,7 @@ export default function KayitOl({ navigation }) {
     }
 
     // 2. E-posta format kontrolü
-    if (!isEmailValid(email)) {
+    if (!isValidEmail(email)) {
       Alert.alert("Hatalı Format", "Lütfen geçerli bir e-posta adresi girin.");
       return;
     }
@@ -77,6 +78,7 @@ export default function KayitOl({ navigation }) {
       await updateProfile(user, {
         displayName: adSoyad.trim()
       });
+      await sendEmailVerification(user);
 
       // Authentication hesabı oluşturulduktan sonra profil belgesini yaz.
       // Firestore kuralı bu adımı engellerse hesap yine de geçerlidir.
@@ -88,23 +90,17 @@ export default function KayitOl({ navigation }) {
         });
       } catch (firestoreError) {
         console.warn("Kullanıcı profili Firestore'a yazılamadı:", firestoreError.code, firestoreError.message);
-        setYukleniyor(false);
-        Alert.alert(
-          "Hesap Oluşturuldu",
-          "Hesabınız oluşturuldu ancak profil bilgileriniz veritabanına kaydedilemedi. Uygulamaya devam edebilirsiniz; yönetici Firestore kurallarını kontrol etmelidir."
-        );
-        navigation.reset({ index: 0, routes: [{ name: 'AnaSayfa' }] });
-        return;
+        throw firestoreError;
       }
 
-      setYukleniyor(false);
-      Alert.alert("Başarılı! 🎉", "Hesabınız başarıyla oluşturuldu.");
-      navigation.navigate('AnaSayfa');
+      await signOut(auth);
+      Alert.alert('Kayıt Başarılı', 'Kayıt başarılı. Lütfen e-posta adresinize gelen linke tıklayarak hesabınızı doğrulayın.');
+      navigation.reset({ index: 0, routes: [{ name: 'GirisEkrani' }] });
       
     } catch (error) {
       setYukleniyor(false);
       console.warn("Kayıt hatası:", error.code, error.message);
-      Alert.alert("Kayıt Hatası", getFirebaseHataMesaji(error.code));
+      Alert.alert("Kayıt Hatası", getAuthErrorMessage(error.code));
     }
   };
 
