@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Firebase bağlantıları
 import { auth, db } from '../firebaseConfig';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function MulakatDetayi({ route, navigation }) {
   const { mulakatData } = route.params;
@@ -15,6 +15,8 @@ export default function MulakatDetayi({ route, navigation }) {
   const [destekliyor, setDestekliyor] = useState(false);
   const [desteklemiyor, setDesteklemiyor] = useState(false);
   const [kaydedildi, setKaydedildi] = useState(false);
+  const [sikayetModalAcik, setSikayetModalAcik] = useState(false);
+  const [sikayetGonderiliyor, setSikayetGonderiliyor] = useState(false);
 
   // Sayaç State'leri
   const [destekSayisi, setDestekSayisi] = useState(mulakatData.destekleyenler?.length || 0);
@@ -124,45 +126,28 @@ export default function MulakatDetayi({ route, navigation }) {
       return;
     }
 
-    Alert.alert(
-      "Değerlendirmeyi Şikayet Et",
-      "Bu içeriği neden şikayet etmek istiyorsunuz?",
-      [
-        { text: "Vazgeç", style: "cancel" },
-        { 
-          text: "Küfür / Hakaret", 
-          onPress: () => sikayetiGonder("Küfür / Hakaret") 
-        },
-        { 
-          text: "Yanıltıcı / Gerçek Dışı Bilgi", 
-          onPress: () => sikayetiGonder("Yanıltıcı Bilgi") 
-        },
-        { 
-          text: "Gizlilik İhlali (NDA)", 
-          onPress: () => sikayetiGonder("Gizlilik İhlali") 
-        },
-        { 
-          text: "Diğer", 
-          onPress: () => sikayetiGonder("Diğer") 
-        }
-      ]
-    );
+    setSikayetModalAcik(true);
   };
 
-  const sikayetiGonder = async (neden) => {
-    const docRef = doc(db, "mulakatlar", mulakatData.id);
+  const sikayetiGonder = async (sebep) => {
+    if (!currentUser || sikayetGonderiliyor) return;
+
+    setSikayetGonderiliyor(true);
     try {
-      await updateDoc(docRef, {
-        sikayetler: arrayUnion({
-          userId: userId,
-          neden: neden,
-          tarih: new Date().toISOString()
-        })
+      await addDoc(collection(db, "sikayetler"), {
+        mulakatId: mulakatData.id,
+        sikayetEdenId: currentUser.uid,
+        sebep,
+        tarih: serverTimestamp(),
+        durum: "inceleniyor"
       });
-      Alert.alert("Teşekkürler", "Geri bildiriminiz alınmıştır. İlgili değerlendirme incelemeye alınacaktır.");
+      setSikayetModalAcik(false);
+      Alert.alert("Başarılı", "Şikayetiniz alınmıştır. Ekibimiz en kısa sürede inceleyecektir.");
     } catch (error) {
       console.log("Şikayet hatası:", error);
-      Alert.alert("Hata", "Şikayet gönderilirken bir sorun oluştu.");
+      Alert.alert("Hata", "Şikayet gönderilirken bir hata oluştu, lütfen daha sonra tekrar deneyin.");
+    } finally {
+      setSikayetGonderiliyor(false);
     }
   };
 
@@ -176,6 +161,41 @@ export default function MulakatDetayi({ route, navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#E3EBF3" />
+      <Modal
+        animationType="fade"
+        transparent
+        visible={sikayetModalAcik}
+        onRequestClose={() => !sikayetGonderiliyor && setSikayetModalAcik(false)}
+      >
+        <View style={styles.modalArkaPlan}>
+          <View style={styles.sikayetModal}>
+            <Text style={styles.sikayetBaslik}>Değerlendirmeyi Şikayet Et</Text>
+            <Text style={styles.sikayetAciklama}>Bu içeriği neden şikayet etmek istiyorsunuz?</Text>
+
+            {['Küfür/Hakaret', 'İlgisiz İçerik', 'Spam', 'Kişisel Veri İhlali'].map((sebep) => (
+              <TouchableOpacity
+                key={sebep}
+                style={styles.sikayetSecenegi}
+                onPress={() => sikayetiGonder(sebep)}
+                disabled={sikayetGonderiliyor}
+              >
+                <Text style={styles.sikayetSecenegiMetni}>{sebep}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {sikayetGonderiliyor ? (
+              <View style={styles.sikayetYukleniyor}>
+                <ActivityIndicator color="#0A66C2" />
+                <Text style={styles.sikayetYukleniyorMetni}>Gönderiliyor...</Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.iptalButonu} onPress={() => setSikayetModalAcik(false)}>
+                <Text style={styles.iptalButonuMetni}>İptal</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
       
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -287,6 +307,17 @@ const styles = StyleSheet.create({
   headerRightActions: { flexDirection: 'row', alignItems: 'center' },
   headerIconButton: { backgroundColor: '#ffffff', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#D0DCEB', marginLeft: 8 },
   saveIconButtonActive: { backgroundColor: '#0A1931', borderColor: '#0A1931' },
+
+  modalArkaPlan: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+  sikayetModal: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20 },
+  sikayetBaslik: { color: '#0A1931', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
+  sikayetAciklama: { color: '#555555', fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  sikayetSecenegi: { paddingVertical: 14, borderTopWidth: 1, borderTopColor: '#E8EDF3' },
+  sikayetSecenegiMetni: { color: '#0A1931', fontSize: 16, fontWeight: '600' },
+  iptalButonu: { alignItems: 'center', marginTop: 12, paddingVertical: 12 },
+  iptalButonuMetni: { color: '#D93025', fontSize: 16, fontWeight: 'bold' },
+  sikayetYukleniyor: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16, paddingVertical: 12 },
+  sikayetYukleniyorMetni: { color: '#0A1931', fontSize: 14, fontWeight: '600', marginLeft: 10 },
 
   content: { padding: 20 },
   titleSection: { alignItems: 'center', marginBottom: 25, marginTop: 10 },

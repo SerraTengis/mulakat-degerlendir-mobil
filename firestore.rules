@@ -41,5 +41,22 @@ service cloud.firestore {
         ])
       );
     }
+
+    match /sikayetler/{sikayetId} {
+      // Şikayetler yalnızca şikayeti oluşturan kullanıcı tarafından yazılabilir.
+      // İnceleme erişimi yöneticilerle sınırlıdır.
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          'mulakatId', 'sikayetEdenId', 'sebep', 'tarih', 'durum'
+        ]) &&
+        request.resource.data.mulakatId is string &&
+        request.resource.data.sikayetEdenId == request.auth.uid &&
+        request.resource.data.sebep in [
+          'Küfür/Hakaret', 'İlgisiz İçerik', 'Spam', 'Kişisel Veri İhlali'
+        ] &&
+        request.resource.data.tarih == request.time &&
+        request.resource.data.durum == 'inceleniyor';
+      allow read, update, delete: if isAdmin();
+    }
   }
 }
