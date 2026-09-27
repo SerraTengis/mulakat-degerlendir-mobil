@@ -26,7 +26,7 @@ export default function Profil({ navigation }) {
   const userId = auth.currentUser?.uid;
   const profilBasHarf = kullaniciAd.charAt(0).toUpperCase();
 
-  // Tüm verileri kullanıcının durumuna göre çekiyoruz
+  
   const verileriGetir = async () => {
     if (!auth.currentUser) return;
     try {
