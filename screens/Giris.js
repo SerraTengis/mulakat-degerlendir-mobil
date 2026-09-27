@@ -37,7 +37,7 @@ export default function Giris({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E3EBF3', // YENİ: Buz Mavisi
+    backgroundColor: '#E3EBF3', 
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 60,
