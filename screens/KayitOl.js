@@ -21,7 +21,7 @@ export default function KayitOl({ navigation }) {
     return emailRegex.test(emailAdresi);
   };
 
-  // YENİ: Şifre zorluğunu kontrol eden fonksiyon (Regex)
+  //Şifre zorluğunu kontrol eden fonksiyon (Regex)
   const isPasswordValid = (password) => {
     const minLength = password.length >= 6;
     const hasUppercase = /[A-Z]/.test(password); // En az bir büyük harf
@@ -52,13 +52,13 @@ export default function KayitOl({ navigation }) {
       return;
     }
 
-    // 2. E-posta format kontrolü
+    // E-posta format kontrolü
     if (!isValidEmail(email)) {
       Alert.alert("Hatalı Format", "Lütfen geçerli bir e-posta adresi girin.");
       return;
     }
 
-    // 3. GÜNCELLENDİ: Şifre karmaşıklığı kontrolü
+    // Şifre karmaşıklığı kontrolü
     if (!isPasswordValid(sifre)) {
       Alert.alert(
         "Zayıf Şifre", 
@@ -80,8 +80,7 @@ export default function KayitOl({ navigation }) {
       });
       await sendEmailVerification(user);
 
-      // Authentication hesabı oluşturulduktan sonra profil belgesini yaz.
-      // Firestore kuralı bu adımı engellerse hesap yine de geçerlidir.
+      
       try {
         await setDoc(doc(db, "users", user.uid), {
           adSoyad: adSoyad.trim(),
@@ -160,7 +159,7 @@ export default function KayitOl({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {/* YENİ: Şifre bilgilendirme metni */}
+            {/* Şifre bilgilendirme metni */}
             <Text style={styles.passwordHint}>
               * Şifreniz en az 6 karakter, 1 büyük harf ve 1 sembol (!, @, #, $, vb.) içermelidir.
             </Text>
