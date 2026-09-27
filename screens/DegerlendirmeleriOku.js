@@ -8,7 +8,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { db } from '../firebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-// YENİ: Dinamik şirket ve pozisyon listelerimizi içe aktarıyoruz
 import { sirketlerListesi, pozisyonlarListesi } from '../veriListeleri';
 
 export default function DegerlendirmeleriOku({ navigation }) {
