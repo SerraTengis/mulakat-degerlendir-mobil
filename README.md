@@ -38,6 +38,3 @@ Projeyi yerel ortamınızda (local) çalıştırmak için aşağıdaki adımlar�
 3. Uygulamayı başlatın:
    npx expo start
 
-1. Depoyu bilgisayarınıza klonlayın:
-   ```bash
-   git clone [https://github.com/SerraTengis/mulakat-degerlendir-mobil.git](https://github.com/SerraTengis/mulakat-degerlendir-mobil.git)
