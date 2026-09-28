@@ -8,6 +8,8 @@ Adaylar, girdikleri mülakatlardaki deneyimlerini anonim veya açık kimlikle pa
 
 Uygulamanın derlenmiş en güncel Android (APK) sürümünü doğrudan indirip test edebilirsiniz (Test için cihazınızda *Bilinmeyen Kaynaklardan Yükle* seçeneğinin açık olması gerekmektedir):
 
+*   👉 **[Mülakat Değerlendir APK dosyasını indirmek için tıklayın](https://github.com/SerraTengis/mulakat-degerlendir-mobil/releases/download/v1.0.0/application-2dfe143a-03dd-4492-acb4-4dbe66ad0e76.apk)**
+
 
 ## ✨ Temel Özellikler
 
